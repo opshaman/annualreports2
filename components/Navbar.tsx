@@ -2,14 +2,52 @@
 
 import Link from 'next/link'
 import { useSupabase } from '@/app/providers'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function Navbar() {
   const { user, signOut, loading } = useSupabase()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const router = useRouter()
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  // Generate a consistent color for user based on email
+  const getUserColor = (email: string) => {
+    const colors = [
+      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+    ]
+    const hash = email.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0)
+      return a & a
+    }, 0)
+    return colors[Math.abs(hash) % colors.length]
+  }
+
+  // Get user initials
+  const getUserInitials = (email: string) => {
+    const parts = email.split('@')[0].split('.')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return email.substring(0, 2).toUpperCase()
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,6 +87,12 @@ export default function Navbar() {
               >
                 Reports
               </Link>
+              <Link
+                href="/feed"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Insights Feed
+              </Link>
             </div>
           </div>
 
@@ -79,14 +123,39 @@ export default function Navbar() {
             {loading ? (
               <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
             ) : user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-700">{user.email}</span>
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={signOut}
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium hover:opacity-80 transition-opacity ${getUserColor(user.email || '')}`}
                 >
-                  Sign out
+                  {getUserInitials(user.email || '')}
                 </button>
+                
+                {/* Dropdown menu */}
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                      <div className="font-medium">Signed in as</div>
+                      <div className="truncate text-gray-500">{user.email}</div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => {
+                        signOut()
+                        setProfileDropdownOpen(false)
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex space-x-2">
@@ -172,14 +241,21 @@ export default function Navbar() {
           >
             Reports
           </Link>
+          <Link
+            href="/feed"
+            className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+            onClick={() => setMenuOpen(false)}
+          >
+            Insights Feed
+          </Link>
         </div>
         
         {user && (
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                  {user.email?.charAt(0).toUpperCase()}
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-medium ${getUserColor(user.email || '')}`}>
+                  {getUserInitials(user.email || '')}
                 </div>
               </div>
               <div className="ml-3">
@@ -187,6 +263,13 @@ export default function Navbar() {
               </div>
             </div>
             <div className="mt-3 space-y-1">
+              <Link
+                href="/profile"
+                className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                onClick={() => setMenuOpen(false)}
+              >
+                Profile
+              </Link>
               <button
                 className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                 onClick={() => {
