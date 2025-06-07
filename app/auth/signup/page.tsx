@@ -8,8 +8,13 @@ import { useSupabase } from '@/app/providers'
 export default function SignUp() {
   const { supabase } = useSupabase()
   const router = useRouter()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [subscribeNewsletter, setSubscribeNewsletter] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,12 +23,48 @@ export default function SignUp() {
     setError(null)
     setLoading(true)
 
+    // Validation
+    if (!fullName.trim()) {
+      setError('Please enter your full name')
+      setLoading(false)
+      return
+    }
+
+    if (!email.trim()) {
+      setError('Please enter your email')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy')
+      setLoading(false)
+      return
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: fullName.trim(),
+            company: company.trim() || null,
+            subscribe_newsletter: subscribeNewsletter
+          }
         },
       })
 
@@ -57,6 +98,24 @@ export default function SignUp() {
 
           <form className="space-y-6" onSubmit={handleSignUp}>
             <div>
+              <label htmlFor="fullName" className="block text-sm font-medium leading-6 text-gray-900">
+                Full Name
+              </label>
+              <div className="mt-2">
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your full name"
+                />
+              </div>
+            </div>
+
+            <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
                 Email address
               </label>
@@ -70,6 +129,24 @@ export default function SignUp() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your email address"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium leading-6 text-gray-900">
+                Company (Optional)
+              </label>
+              <div className="mt-2">
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  placeholder="Your company or organization"
                 />
               </div>
             </div>
@@ -88,7 +165,75 @@ export default function SignUp() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your password"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium leading-6 text-gray-900">
+                Confirm Password
+              </label>
+              <div className="mt-2">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  placeholder="Confirm your password"
+                />
+              </div>
+            </div>
+
+            {/* Checkboxes */}
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="newsletter"
+                    name="newsletter"
+                    type="checkbox"
+                    checked={subscribeNewsletter}
+                    onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="newsletter" className="text-gray-700">
+                    Subscribe to our weekly insights newsletter with the latest financial analysis and market trends
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="terms"
+                    name="terms"
+                    type="checkbox"
+                    required
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="terms" className="text-gray-700">
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-blue-600 hover:text-blue-500" target="_blank">
+                      Terms of Service
+                    </Link>
+                    {' '}and{' '}
+                    <Link href="/privacy" className="text-blue-600 hover:text-blue-500" target="_blank">
+                      Privacy Policy
+                    </Link>
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                </div>
               </div>
             </div>
 
