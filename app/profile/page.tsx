@@ -3,6 +3,7 @@
 import { useSupabase } from '@/app/providers'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import InterestSelector from '@/components/InterestSelector'
 
 export default function ProfilePage() {
   const { user, loading } = useSupabase()
@@ -10,6 +11,8 @@ export default function ProfilePage() {
   const [profileLoading, setProfileLoading] = useState(true)
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestSent, setRequestSent] = useState(false)
+  const [interests, setInterests] = useState<string[]>([])
+  const [interestsLoading, setInterestsLoading] = useState(false)
   const { supabase } = useSupabase()
 
   useEffect(() => {
@@ -22,12 +25,36 @@ export default function ProfilePage() {
           .single()
         
         setProfile(data)
+        setInterests(data?.interests || [])
         setProfileLoading(false)
       }
     }
 
     fetchProfile()
   }, [user, supabase])
+
+  const handleInterestsChange = async (newInterests: string[]) => {
+    setInterests(newInterests)
+    setInterestsLoading(true)
+    
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ interests: newInterests })
+        .eq('id', user?.id)
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      console.error('Error updating interests:', error)
+      alert('Failed to update interests. Please try again.')
+      // Revert to previous state
+      setInterests(profile?.interests || [])
+    } finally {
+      setInterestsLoading(false)
+    }
+  }
 
   const handleAccessRequest = async () => {
     setRequestLoading(true)
@@ -200,6 +227,45 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Interests Section */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-medium text-gray-900">Your Interests</h2>
+            {interestsLoading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            )}
+          </div>
+          
+          <InterestSelector
+            selectedInterests={interests}
+            onInterestsChange={handleInterestsChange}
+            disabled={interestsLoading}
+          />
+          
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Personalized Feed
+                </h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>
+                    Your interests help us show you the most relevant insights from annual reports. 
+                    You can change these anytime, and we'll automatically update your feed.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
